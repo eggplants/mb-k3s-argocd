@@ -67,6 +67,7 @@ mise run cluster:kubeconfig
 
 1. [DNS](https://console.tailscale.com/admin/dns) で MagicDNS と HTTPS Certificates を有効にする。
    `cluster/settings.toml` の `tailnet` には、ここに表示される `tail1234.ts.net` のような DNS 名を書く。
+
 2. [Definitions](https://console.tailscale.com/admin/acls/visual/tags) の `tagOwners` に以下を足す。
 
    ```json
@@ -79,6 +80,7 @@ mise run cluster:kubeconfig
 3. [operator の前提条件](https://tailscale.com/kb/1236/kubernetes-operator#prerequisites) に従って OAuth クライアントを作る。
    タグは `tag:k8s-operator` を設定する。
    スコープは Devices Core / Auth Keys / Services の `write` を付与する。
+
 4. `mise run cluster:tailscale-oauth` でクライアント ID とシークレットを反映する。
 
 ## Argo CD

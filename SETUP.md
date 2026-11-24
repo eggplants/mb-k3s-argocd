@@ -139,7 +139,9 @@ Each Pi should show its own hostname, its fixed address on `eth0`, no swap, and 
 ## 9. Hand over to the repository
 
 1. Add each Pi to `[bootstrap.remote.hosts]` in `mise.toml` (`host` = its IPv4 address, `mise_env = ["server" or "agent", "<name>"]`).
+
 2. Create `cluster/mise.<name>.toml` with `node_ip` set to the same address.
+
 3. Run the rest of [README.md](README.md#setup):
 
    ```bash

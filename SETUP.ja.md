@@ -139,7 +139,9 @@ ssh pi@192.168.1.10 'hostname; ip -4 -br addr show eth0; swapon --show; cat /pro
 ## 9. リポジトリ側の作業に移る
 
 1. `mise.toml` の `[bootstrap.remote.hosts]` に各 Pi を足す (`host` はその IPv4 アドレス、`mise_env = ["server" か "agent", "<名前>"]`)。
+
 2. `cluster/mise.<名前>.toml` を作り、`node_ip` に同じアドレスを書く。
+
 3. 残りは [README.ja.md](README.ja.md#セットアップ) に従う:
 
    ```bash

@@ -67,6 +67,7 @@ Do the following in the [Tailscale admin console](https://console.tailscale.com/
 
 1. Turn on MagicDNS and HTTPS Certificates under [DNS](https://console.tailscale.com/admin/dns).
    Set `tailnet` in `cluster/settings.toml` to the DNS name shown there, like `tail1234.ts.net`.
+
 2. Add the following to `tagOwners` under [Definitions](https://console.tailscale.com/admin/acls/visual/tags).
 
    ```json
@@ -79,6 +80,7 @@ Do the following in the [Tailscale admin console](https://console.tailscale.com/
 3. Create an OAuth client as the [operator's prerequisites](https://tailscale.com/kb/1236/kubernetes-operator#prerequisites) describe.
    Give it the tag `tag:k8s-operator`.
    Grant it the `write` scopes for Devices Core, Auth Keys and Services.
+
 4. Apply the client ID and secret with `mise run cluster:tailscale-oauth`.
 
 ## Argo CD

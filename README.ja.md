@@ -16,7 +16,7 @@ Raspberry Pi 4 を 1 台の k3s server と n 台の k3s agent にし、Argo CD �
 
 ## セットアップ
 
-```text
+```bash
 git clone https://github.com/eggplants/mb-k3s-argocd
 cd mb-k3s-argocd
 mise install

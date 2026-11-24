@@ -6,6 +6,11 @@
 #   mise bootstrap remote --all --dry-run
 #   mise bootstrap remote --all
 
+[settings]
+# Tools are "latest", and CI resolves that on its own. Waiting a week for each release makes it pick
+# the same versions as this machine, and keeps a brand-new release out until it has had time to settle.
+minimum_release_age = "7d"
+
 [env]
 # written by `mise run cluster:kubeconfig`
 KUBECONFIG = "{{ config_root }}/kubeconfig"

@@ -6,7 +6,8 @@ A template for turning Raspberry Pi 4s into one k3s server and n k3s agents, man
 
 ## Requirements
 
-- One or more Raspberry Pi 4s. Write Raspberry Pi OS Lite (64-bit) with [Raspberry Pi Imager](https://www.raspberrypi.com/software/), setting the hostname, the user and an SSH public key
+- One or more Raspberry Pi 4s. Write Raspberry Pi OS Lite (64-bit) with [Raspberry Pi Imager](https://www.raspberrypi.com/software/), setting the hostname, the user and an SSH public key.
+  Refefenced instruction: [SETUP.md](SETUP.md)
 - The user on each Pi can run `sudo` without a password (the Raspberry Pi OS default)
 - A fixed IPv4 address for each Pi. The nodes and your machine connect to each other at these addresses
   - Set them up on the router, e.g. with DHCP reservations

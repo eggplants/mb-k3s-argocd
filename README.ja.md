@@ -6,7 +6,8 @@ Raspberry Pi 4 を 1 台の k3s server と n 台の k3s agent にし、Argo CD �
 
 ## 必要なもの
 
-- Raspberry Pi 4 を 1 台以上。Raspberry Pi OS Lite (64-bit) を [Raspberry Pi Imager](https://www.raspberrypi.com/software/) で書き込み、ホスト名、ユーザー、SSH 公開鍵を設定しておく
+- Raspberry Pi 4 を 1 台以上。Raspberry Pi OS Lite (64-bit) を [Raspberry Pi Imager](https://www.raspberrypi.com/software/) で書き込み、ホスト名、ユーザー、SSH 公開鍵を設定しておく。
+  参考手順: [SETUP.ja.md](SETUP.ja.md)
 - 各 Pi のユーザーがパスワードなしで `sudo` できること (Raspberry Pi OS の既定)
 - 各 Pi の固定 IPv4 アドレス。ノード同士と手元のマシンはこのアドレスで接続する
   - 別途ルーター側で DHCP の予約などを行う

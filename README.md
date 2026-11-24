@@ -16,7 +16,7 @@ A template for turning Raspberry Pi 4s into one k3s server and n k3s agents, man
 
 ## Setup
 
-```text
+```bash
 git clone https://github.com/eggplants/mb-k3s-argocd
 cd mb-k3s-argocd
 mise install

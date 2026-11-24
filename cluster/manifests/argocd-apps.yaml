@@ -1,0 +1,29 @@
+# Rendered by mise (template = true in ../mise.server.toml).
+# The root of app-of-apps: Argo CD renders ../../apps, whose templates are one Application per app.
+# Adding an app is a commit to apps/; it does not need mise bootstrap remote.
+# No resources-finalizer: deleting this Application must leave the apps running.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: apps
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: {{ vars.repo_url }}
+    targetRevision: {{ vars.repo_revision }}
+    path: apps
+    helm:
+      releaseName: apps
+      valuesObject:
+        repoURL: {{ vars.repo_url }}
+        targetRevision: {{ vars.repo_revision }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    # prune only removes the Application of an app dropped from apps/; the Applications have no
+    # resources-finalizer, so the app itself keeps running until its resources are deleted by hand
+    automated:
+      prune: true
+      selfHeal: true

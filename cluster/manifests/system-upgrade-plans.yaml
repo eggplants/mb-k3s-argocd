@@ -1,0 +1,57 @@
+# Rendered by mise (template = true in ../mise.server.toml).
+# Keeps every node on the newest k3s patch of settings.toml's k3s_version minor. To move to the next minor, see ../../README.md.
+# Cordon only, never drain: a pod with a node-local volume would have nowhere to go.
+{%- set channel = (vars.k3s_version | split(pat="."))[:2] | join(sep=".") %}
+apiVersion: upgrade.cattle.io/v1
+kind: Plan
+metadata:
+  name: server-plan
+  namespace: system-upgrade
+spec:
+  concurrency: 1
+  cordon: true
+  nodeSelector:
+    matchExpressions:
+      - key: node-role.kubernetes.io/control-plane
+        operator: In
+        values:
+          - "true"
+  serviceAccountName: system-upgrade
+  upgrade:
+    image: rancher/k3s-upgrade
+  channel: https://update.k3s.io/v1-release/channels/{{ channel }}
+  window:
+    days:
+      - sunday
+    startTime: "03:00:00"
+    endTime: "05:00:00"
+    timeZone: {{ vars.timezone }}
+---
+apiVersion: upgrade.cattle.io/v1
+kind: Plan
+metadata:
+  name: agent-plan
+  namespace: system-upgrade
+spec:
+  concurrency: 1
+  cordon: true
+  nodeSelector:
+    matchExpressions:
+      - key: node-role.kubernetes.io/control-plane
+        operator: DoesNotExist
+  # waits until server-plan has upgraded the server
+  prepare:
+    image: rancher/k3s-upgrade
+    args:
+      - prepare
+      - server-plan
+  serviceAccountName: system-upgrade
+  upgrade:
+    image: rancher/k3s-upgrade
+  channel: https://update.k3s.io/v1-release/channels/{{ channel }}
+  window:
+    days:
+      - sunday
+    startTime: "03:00:00"
+    endTime: "05:00:00"
+    timeZone: {{ vars.timezone }}

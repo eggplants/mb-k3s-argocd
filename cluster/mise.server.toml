@@ -1,0 +1,62 @@
+# k3s server (control plane). Everything in /var/lib/rancher/k3s/server/manifests is applied by k3s itself;
+# apps after that come from Argo CD (manifests/argocd-apps.yaml -> ../apps).
+# Files with template = true are rendered with the [vars] from settings.toml and mise.<name>.toml.
+
+[env]
+K3S_ROLE = "server"
+
+# No Traefik: services are reached through the Tailscale operator's Ingresses (manifests/tailscale-operator.yaml).
+[bootstrap.files."/etc/rancher/k3s/config.yaml"]
+template = true
+content = """
+node-ip: {{ vars.node_ip }}
+tls-san:
+  - {{ vars.node_ip }}
+disable:
+  - traefik
+"""
+
+[bootstrap.files."/var/lib/rancher/k3s/server/manifests/system-upgrade-controller.yaml"]
+source = "./manifests/system-upgrade-controller.yaml"
+owner = "root"
+group = "root"
+mode = "0600"
+
+[bootstrap.files."/var/lib/rancher/k3s/server/manifests/system-upgrade-crd.yaml"]
+source = "./manifests/system-upgrade-crd.yaml"
+owner = "root"
+group = "root"
+mode = "0600"
+
+[bootstrap.files."/var/lib/rancher/k3s/server/manifests/system-upgrade-plans.yaml"]
+source = "./manifests/system-upgrade-plans.yaml"
+template = true
+owner = "root"
+group = "root"
+mode = "0600"
+
+[bootstrap.files."/var/lib/rancher/k3s/server/manifests/tailscale-operator.yaml"]
+source = "./manifests/tailscale-operator.yaml"
+owner = "root"
+group = "root"
+mode = "0600"
+
+[bootstrap.files."/var/lib/rancher/k3s/server/manifests/argocd.yaml"]
+source = "./manifests/argocd.yaml"
+template = true
+owner = "root"
+group = "root"
+mode = "0600"
+
+[bootstrap.files."/var/lib/rancher/k3s/server/manifests/argocd-apps.yaml"]
+source = "./manifests/argocd-apps.yaml"
+template = true
+owner = "root"
+group = "root"
+mode = "0600"
+
+# These run before k3s.sh, so a new server needs the directory made here.
+[bootstrap.directories."/var/lib/rancher/k3s/server/manifests"]
+owner = "root"
+group = "root"
+mode = "0700"

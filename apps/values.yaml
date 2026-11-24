@@ -1,0 +1,4 @@
+# cluster/manifests/argocd-apps.yaml sets these from cluster/settings.toml.
+# The defaults here are only for helm template and ct lint.
+repoURL: https://github.com/OWNER/REPO
+targetRevision: main

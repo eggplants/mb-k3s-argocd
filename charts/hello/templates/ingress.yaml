@@ -1,0 +1,15 @@
+# Inside the tailnet only, at https://{{ .Values.tailscale.hostname }}.<tailnet>, with a certificate from Tailscale.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hello
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: hello
+      port:
+        name: web
+  tls:
+    - hosts:
+        - {{ .Values.tailscale.hostname }}

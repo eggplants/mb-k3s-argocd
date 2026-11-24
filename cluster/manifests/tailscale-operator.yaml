@@ -1,0 +1,27 @@
+# Puts Services and Ingresses on the tailnet: an Ingress with ingressClassName: tailscale becomes
+# https://<tls host>.<tailnet>, with a certificate from Tailscale.
+# It logs in with the OAuth client in the operator-oauth Secret: mise run cluster:tailscale-oauth
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: tailscale-operator
+  namespace: kube-system
+spec:
+  repo: https://pkgs.tailscale.com/helmcharts
+  chart: tailscale-operator
+  version: 1.104.7
+  targetNamespace: tailscale
+  createNamespace: true
+  valuesContent: |-
+    operatorConfig:
+      hostname: k3s-operator
+      # Leave the server to the control plane when there is an agent to go to.
+      # Preferred, not required, so a cluster with no agents still works.
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: DoesNotExist

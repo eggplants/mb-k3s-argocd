@@ -1,0 +1,52 @@
+# Rendered by mise (template = true in ../mise.server.toml).
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: argocd
+  namespace: kube-system
+spec:
+  repo: https://argoproj.github.io/argo-helm
+  chart: argo-cd
+  version: 10.12.1
+  targetNamespace: argocd
+  createNamespace: true
+  valuesContent: |-
+    global:
+      domain: argocd.{{ vars.tailnet }}
+      # Leave the server to the control plane when there is an agent to go to.
+      # Soft, not hard, so a cluster with no agents still works.
+      affinity:
+        nodeAffinity:
+          type: soft
+          matchExpressions:
+            - key: node-role.kubernetes.io/control-plane
+              operator: DoesNotExist
+    dex:
+      enabled: false
+    notifications:
+      enabled: false
+    applicationSet:
+      replicas: 0
+    configs:
+      params:
+        # the Tailscale proxy terminates TLS
+        server.insecure: true
+    extraObjects:
+      # https://argocd.<tailnet>, inside the tailnet only.
+      # Not the chart's server.ingress, which writes rules for global.domain: the Tailscale operator only needs a
+      # default backend, and names the device after the first tls host.
+      - apiVersion: networking.k8s.io/v1
+        kind: Ingress
+        metadata:
+          name: argocd-server-tailscale
+          namespace: argocd
+        spec:
+          ingressClassName: tailscale
+          defaultBackend:
+            service:
+              name: argocd-server
+              port:
+                name: http
+          tls:
+            - hosts:
+                - argocd

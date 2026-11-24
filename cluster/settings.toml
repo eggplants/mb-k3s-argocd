@@ -1,0 +1,20 @@
+# Cluster-wide settings, read as [vars] by ../mise.toml (on your machine) and by ./mise.toml (on every node).
+# Hosts are listed in [bootstrap.remote.hosts] in ../mise.toml, and each node's own IPv4 address is in mise.<name>.toml.
+
+# What a new node is installed with. The minor (v1.37) is also the channel
+# manifests/system-upgrade-plans.yaml keeps the running nodes on.
+k3s_version = "v1.37.2+k3s1"
+
+# The server's LAN IPv4 address, which the agents join. The same as node_ip in the server's mise.<name>.toml.
+server_ip = "192.168.1.10"
+
+# The tailnet's DNS name (Tailscale admin console > DNS), e.g. tail1234.ts.net.
+# Services are https://<hostname>.<tailnet> inside the tailnet; Argo CD is https://argocd.<tailnet>.
+tailnet = "example.ts.net"
+
+# The repository Argo CD watches for apps/. Private repositories also need credentials in Argo CD.
+repo_url = "https://github.com/OWNER/REPO"
+repo_revision = "main"
+
+# When system-upgrade-controller may upgrade k3s (Sundays 03:00-05:00).
+timezone = "Asia/Tokyo"

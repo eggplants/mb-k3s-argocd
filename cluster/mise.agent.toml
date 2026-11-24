@@ -1,0 +1,13 @@
+# k3s agents. They join the server at settings.toml's server_ip.
+# /etc/rancher/k3s/token is written by `mise run cluster:token` on your machine.
+
+[env]
+K3S_ROLE = "agent"
+
+[bootstrap.files."/etc/rancher/k3s/config.yaml"]
+template = true
+content = """
+server: https://{{ vars.server_ip }}:6443
+token-file: /etc/rancher/k3s/token
+node-ip: {{ vars.node_ip }}
+"""

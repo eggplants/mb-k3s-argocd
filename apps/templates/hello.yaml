@@ -1,0 +1,24 @@
+# A sample app. Copy this file and charts/hello/ to add another; delete both to drop it.
+# No resources-finalizer: deleting this Application must leave hello running.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hello
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.repoURL }}
+    targetRevision: {{ .Values.targetRevision }}
+    path: charts/hello
+    helm:
+      releaseName: hello
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: hello
+  syncPolicy:
+    # no prune: something dropped from the chart stays until it is removed by hand
+    automated:
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

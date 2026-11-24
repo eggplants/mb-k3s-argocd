@@ -1,0 +1,5 @@
+# pi02, an agent. Loaded through mise_env in ../mise.toml.
+
+[vars]
+# this node's LAN IPv4 address: k3s's node-ip, which the other nodes reach it at, and the host in ../mise.toml
+node_ip = "192.168.1.11"

@@ -1,0 +1,26 @@
+# Shared by every node (Raspberry Pi 4, Raspberry Pi OS Lite 64-bit / Debian, arm64).
+# The role and the node come from mise_env in ../mise.toml: ["server" or "agent", "<name>"]
+# loads mise.server.toml or mise.agent.toml, and mise.<name>.toml with the node's node_ip.
+
+[vars]
+_.file = "settings.toml"
+
+[env]
+K3S_VERSION = "{{ vars.k3s_version }}"
+# empty when the host's mise_env does not name its mise.<name>.toml; k3s.sh stops then
+K3S_NODE_IP = "{{ vars.node_ip | default(value='') }}"
+
+[bootstrap.packages]
+"apt:ca-certificates" = "latest"
+"apt:curl" = "latest"
+"apt:conntrack" = "latest"
+
+# config.yaml goes here before k3s is installed, and a new node does not have it yet
+[bootstrap.directories."/etc/rancher/k3s"]
+owner = "root"
+group = "root"
+mode = "0755"
+
+[tasks.bootstrap]
+description = "Install k3s for this node's role and apply /etc/rancher/k3s/config.yaml"
+run = "bash k3s.sh"

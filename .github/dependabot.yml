@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://www.schemastore.org/dependabot-2.0.json
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: ["*"]
+
+  # Image tags in the charts' values.yaml and in plain manifests.
+  # Not covered: `version` in k3s HelmChart manifests (argo-cd, tailscale-operator).
+  - package-ecosystem: docker
+    directories:
+      - /charts/hello
+      - /cluster/manifests
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    groups:
+      docker:
+        patterns: ["*"]

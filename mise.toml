@@ -1,0 +1,218 @@
+# Run on your machine. `mise bootstrap remote` sends cluster/ to each Pi and runs `mise bootstrap` there.
+# Each host's mise_env picks its role (cluster/mise.server.toml or cluster/mise.agent.toml)
+# and its own cluster/mise.<name>.toml, which holds its IPv4 address (node_ip).
+#
+#   mise run cluster:up                     # first time: the server, the join token, then the agents
+#   mise bootstrap remote --all --dry-run
+#   mise bootstrap remote --all
+
+[env]
+# written by `mise run cluster:kubeconfig`
+KUBECONFIG = "{{ config_root }}/kubeconfig"
+
+[tools]
+helm = "latest"
+kubectl = "latest"
+yq = "latest"
+rumdl = "latest"
+tombi = "latest"
+"github:helm/chart-testing" = "latest"
+"pipx:yamllint" = "latest"
+"pipx:yamale" = "latest"
+uv = "latest"
+
+[vars]
+_.file = "cluster/settings.toml"
+
+# Exactly one host tagged "server" and any number tagged "agent" (none is fine). For each host:
+#   host     = its LAN IPv4 address, the same as node_ip in cluster/mise.<name>.toml
+#   mise_env = ["<its tag>", "<its name>"]
+# mise run lint:inventory checks all of this. To add an agent, see README.md.
+[bootstrap.remote]
+source = "cluster"
+
+[bootstrap.remote.hosts.pi01]
+host = "192.168.1.10"
+user = "pi"
+tags = ["server"]
+mise_env = ["server", "pi01"]
+
+[bootstrap.remote.hosts.pi02]
+host = "192.168.1.11"
+user = "pi"
+tags = ["agent"]
+mise_env = ["agent", "pi02"]
+
+[bootstrap.remote.hosts.pi03]
+host = "192.168.1.12"
+user = "pi"
+tags = ["agent"]
+mise_env = ["agent", "pi03"]
+
+[tasks.fmt]
+description = "Format Markdown, mise configs and TOML"
+depends = ["fmt:*"]
+
+[tasks."fmt:md"]
+description = "Format Markdown with rumdl"
+run = "rumdl fmt ."
+
+[tasks."fmt:mise"]
+description = "Format mise configs with mise fmt"
+run = ["mise fmt", 'mise fmt -C cluster -E "$(scripts/cluster-envs.sh)"']
+
+[tasks."fmt:toml"]
+description = "Format TOML with tombi"
+# both rewrite the mise configs, so they must not run at the same time
+depends = ["fmt:mise"]
+run = "tombi format"
+
+[tasks.lint]
+description = "Lint Markdown, Helm charts, the inventory, mise configs and TOML"
+depends = ["lint:*"]
+
+[tasks."lint:md"]
+description = "Lint Markdown with rumdl"
+run = "rumdl check ."
+
+[tasks."lint:charts"]
+description = "Lint the Helm charts (apps/ and charts/*) with ct"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+# ct does not look for these next to its binary
+etc="$(mise where github:helm/chart-testing)/etc"
+# Argo CD deploys the branch as it is, so the charts have no maintainers and do not bump their versions
+ct lint --all --chart-dirs .,charts --target-branch main \
+  --check-version-increment=false --validate-maintainers=false \
+  --chart-yaml-schema "$etc/chart_schema.yaml" --lint-conf "$etc/lintconf.yaml"
+'''
+
+[tasks."lint:inventory"]
+description = "Check [bootstrap.remote.hosts] against cluster/mise.<name>.toml: one server, mise_env and IPv4 addresses"
+run = "scripts/check-inventory.sh"
+
+[tasks."lint:mise"]
+description = "Check mise configs' formatting with mise fmt"
+run = [
+  "mise fmt --check",
+  'mise fmt --check -C cluster -E "$(scripts/cluster-envs.sh)"',
+]
+
+[tasks."lint:toml"]
+description = "Check TOML formatting and lint against the mise schema with tombi"
+run = ["tombi format --check", "tombi lint --error-on-warnings"]
+
+[tasks.pre-commit]
+description = "Run before every commit (git hook)"
+depends = ["lint"]
+
+[tasks."cluster:up"]
+description = "Build the cluster: bootstrap the server, copy its join token to the agents, then bootstrap the agents"
+raw = true
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+scripts/check-inventory.sh
+mise bootstrap remote --tag server
+if [[ -n "$(scripts/hosts.sh agent)" ]]; then
+  mise run cluster:token
+  mise bootstrap remote --tag agent
+else
+  echo "cluster:up: no agents in [bootstrap.remote.hosts]; the server runs everything"
+fi
+mise run cluster:status
+echo "cluster:up: the services join the tailnet once the operator has its OAuth client: mise run cluster:tailscale-oauth"
+'''
+
+[tasks."cluster:status"]
+description = "Show the cluster's nodes and Argo CD's Applications"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+server="$(scripts/hosts.sh server | cut -f2)"
+ssh "$server" 'sudo k3s kubectl get nodes -o wide && echo && sudo k3s kubectl -n argocd get applications 2>/dev/null || true'
+'''
+
+[tasks."cluster:token"]
+description = "Copy the server's join token to each agent's /etc/rancher/k3s/token (never printed or stored here)"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+server="$(scripts/hosts.sh server | cut -f2)"
+token="$(ssh "$server" sudo cat /var/lib/rancher/k3s/server/node-token)"
+scripts/hosts.sh agent | while IFS=$'\t' read -r name dest; do
+  # ssh reads the token from the pipe, not the rest of the host list
+  printf '%s\n' "$token" | ssh "$dest" 'sudo install -D -m 600 /dev/stdin /etc/rancher/k3s/token'
+  echo "cluster:token: $name"
+done
+'''
+
+[tasks."cluster:reset"]
+description = "Uninstall k3s from one agent and remove its node from the cluster (e.g. mise run cluster:reset pi02)"
+usage = 'arg "<host>" help="an agent in [bootstrap.remote.hosts]"'
+confirm = "Uninstall k3s from {{ usage.host }} (its data in /var/lib/rancher is deleted)?"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+h="{{ usage.host }}"
+dest="$(scripts/hosts.sh agent | awk -F'\t' -v h="$h" '$1 == h { print $2 }')"
+[[ -n "$dest" ]] || { echo "cluster:reset: $h is not an agent in [bootstrap.remote.hosts]" >&2; exit 1; }
+server="$(scripts/hosts.sh server | cut -f2)"
+ssh "$dest" 'for s in k3s-agent-uninstall.sh k3s-uninstall.sh; do [ ! -x /usr/local/bin/$s ] || sudo /usr/local/bin/$s; done'
+# a node object left behind keeps the old node password, and the rejoin is refused.
+# The node name is the agent's hostname, which may differ from its inventory name.
+node="$(ssh "$dest" hostname)"
+ssh "$server" sudo k3s kubectl delete node "$node" --ignore-not-found
+'''
+
+[tasks."cluster:kubeconfig"]
+description = "Save the server's kubeconfig to ./kubeconfig (gitignored), so kubectl and helm work from this directory"
+quiet = true
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+server="$(scripts/hosts.sh server | cut -f2)"
+umask 077
+ssh "$server" sudo cat /etc/rancher/k3s/k3s.yaml |
+  sed 's#https://127.0.0.1:6443#https://{{ vars.server_ip }}:6443#' >kubeconfig
+echo "cluster:kubeconfig: saved; KUBECONFIG points at it inside this directory"
+'''
+
+[tasks."cluster:argocd-password"]
+description = "Print Argo CD's initial admin password, while argocd-initial-admin-secret still exists"
+quiet = true
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+server="$(scripts/hosts.sh server | cut -f2)"
+ssh "$server" "sudo k3s kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}'" | base64 -d
+echo
+'''
+
+[tasks."cluster:tailscale-oauth"]
+description = "Store the Tailscale operator's OAuth client (asked for here, never printed or stored in this repository)"
+quiet = true
+raw = true
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+server="$(scripts/hosts.sh server | cut -f2)"
+read -rp 'Tailscale OAuth client ID: ' id </dev/tty
+read -rsp 'Tailscale OAuth client secret: ' secret </dev/tty
+echo
+[[ "$secret" == tskey-client-* ]] || { echo "cluster:tailscale-oauth: not an OAuth client secret (tskey-client-...)" >&2; exit 1; }
+# the script and the secret both go over stdin, which keeps the secret out of the server's process list
+{ printf 'id=%q\nsecret=%q\n' "$id" "$secret"; cat <<'EOF'; } | ssh "$server" sudo bash -s
+set -euo pipefail
+# root's shell, not sudo per command: sudo would close the <(...) descriptors before kubectl reads them
+k3s kubectl create namespace tailscale --dry-run=client -o yaml | k3s kubectl apply -f - >/dev/null
+k3s kubectl -n tailscale create secret generic operator-oauth \
+  --from-file=client_id=<(printf '%s' "$id") \
+  --from-file=client_secret=<(printf '%s' "$secret") \
+  --dry-run=client -o yaml | k3s kubectl apply -f - >/dev/null
+# the operator reads the client only when it starts
+k3s kubectl -n tailscale rollout restart deployment operator >/dev/null 2>&1 || true
+echo "cluster:tailscale-oauth: done"
+EOF
+'''
